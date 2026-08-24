@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Dinokalipsa</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+:root{
+  --bg:#181210;
+  --bg2:#211812;
+  --surface:#2a1f18;
+  --surface2:#33261c;
+  --line:#4a3a2a;
+  --bone:#ecdfc4;
+  --bone-dim:#b6a789;
+  --lava:#ff6b35;
+  --lava-dim:#c2481f;
+  --natural:#6fae52;
+  --predator:#c1443c;
+  --emotional:#4a86b0;
+  --meteor:#7b5ea7;
+  --gold:#e0b04a;
+  --good:#6fae52;
+  --bad:#c1443c;
+  --radius:14px;
+  --shadow:0 10px 30px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #2c2015 0%, transparent 60%),
+    radial-gradient(1000px 500px at 110% 10%, #251a12 0%, transparent 55%),
+    var(--bg);
+  color:var(--bone);
+  font-family:'Trebuchet MS','Segoe UI',system-ui,sans-serif;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+#app{max-width:1180px;margin:0 auto;padding:20px 16px 60px;}
+h1,h2,h3{font-family:Georgia,'Times New Roman',serif;letter-spacing:.5px;margin:0;}
+.eyebrow{
+  text-transform:uppercase;letter-spacing:3px;font-size:11px;color:var(--lava);
+  font-weight:700;margin-bottom:6px;
+}
+.hero{
+  text-align:center;padding:38px 10px 26px;position:relative;
+}
+.hero h1{
+  font-size:clamp(38px,7vw,64px);
+  color:var(--bone);
+  text-shadow:0 0 30px rgba(255,107,53,.35), 0 4px 0 #0006;
+  margin-bottom:6px;
+}
+.hero h1 span{color:var(--lava);}
+.hero p{color:var(--bone-dim);font-size:15px;max-width:520px;margin:0 auto;}
+.crackline{
+  height:2px;margin:22px auto;max-width:680px;
+  background:linear-gradient(90deg,transparent,var(--line),var(--lava-dim),var(--line),transparent);
+}
+.card-panel{
+  background:linear-gradient(180deg,var(--surface),var(--surface2));
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:24px;
+}
+.btn{
+  appearance:none;border:none;cursor:pointer;
+  font-family:inherit;font-weight:700;letter-spacing:.4px;
+  padding:12px 22px;border-radius:10px;font-size:15px;
+  background:var(--lava);color:#1a0e08;
+  box-shadow:0 4px 0 var(--lava-dim), 0 8px 18px rgba(255,107,53,.25);
+  transition:transform .08s ease;
+}
+.btn:hover{transform:translateY(-1px);}
+.btn:active{transform:translateY(2px);box-shadow:0 2px 0 var(--lava-dim);}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+.btn.ghost{
+  background:transparent;color:var(--bone);border:1px solid var(--line);
+  box-shadow:none;
+}
+.btn.ghost:hover{border-color:var(--lava);}
+.btn.small{padding:7px 14px;font-size:13px;}
+.btn.danger{background:var(--bad);box-shadow:0 4px 0 #7c2a25;color:#fff;}
+input[type=text]{
+  background:#161009;border:1px solid var(--line);color:var(--bone);
+  padding:11px 14px;border-radius:9px;font-size:15px;font-family:inherit;width:100%;
+}
+input[type=text]:focus{outline:2px solid var(--lava-dim);}
+label.field{display:block;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--bone-dim);margin:14px 0 6px;}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.center{display:flex;flex-direction:column;align-items:center;text-align:center;}
+.mono{font-family:'Consolas','Courier New',monospace;letter-spacing:1px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+@media(max-width:720px){.grid2{grid-template-columns:1fr;}}
+
+.tag{
+  display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;
+  text-transform:uppercase;letter-spacing:1px;font-weight:700;
+}
+.tag.natural{background:rgba(111,174,82,.18);color:var(--natural);border:1px solid var(--natural);}
+.tag.predator{background:rgba(193,68,60,.18);color:var(--predator);border:1px solid var(--predator);}
+.tag.emotional{background:rgba(74,134,176,.18);color:var(--emotional);border:1px solid var(--emotional);}
+.tag.meteor{background:rgba(123,94,167,.22);color:#c9b6ef;border:1px solid var(--meteor);}
+.tag.instant{background:rgba(224,176,74,.18);color:var(--gold);border:1px solid var(--gold);}
+
+.player-list{list-style:none;padding:0;margin:16px 0;display:flex;flex-direction:column;gap:8px;}
+.player-list li{
+  background:#1c140e;border:1px solid var(--line);border-radius:10px;
+  padding:10px 14px;display:flex;justify-content:space-between;align-items:center;
+}
+.player-list li .pname{font-weight:700;}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:8px;}
+.dot.on{background:var(--good);box-shadow:0 0 8px var(--good);}
+.dot.off{background:#665;}
+
+.log{
+  max-height:110px;overflow-y:auto;font-size:12.5px;color:var(--bone-dim);
+  background:#150f0a;border:1px solid var(--line);border-radius:8px;padding:8px 12px;
+  display:flex;flex-direction:column-reverse;gap:3px;
+}
+
+/* GAME BOARD */
+.board{display:flex;flex-direction:column;gap:16px;}
+.track-wrap{
+  background:#150f0a;border:1px solid var(--line);border-radius:12px;padding:14px 16px;
+}
+.track{position:relative;height:14px;border-radius:8px;background:#0e0a06;overflow:visible;border:1px solid var(--line);}
+.track-fill{position:absolute;left:0;top:0;bottom:0;border-radius:8px;background:linear-gradient(90deg,var(--lava-dim),var(--lava));transition:width .5s ease;}
+.track-marker{
+  position:absolute;top:-11px;transform:translateX(-50%);
+  width:26px;height:26px;border-radius:50%;
+  background:var(--surface2);border:2px solid var(--gold);
+  display:flex;align-items:center;justify-content:center;font-size:13px;
+  transition:left .5s ease;
+}
+
+.disaster-stage{
+  display:flex;justify-content:center;align-items:center;gap:26px;flex-wrap:wrap;
+  padding:8px 0 4px;
+}
+.disaster-card{
+  width:140px;height:190px;border-radius:12px;position:relative;
+  display:flex;flex-direction:column;justify-content:space-between;
+  padding:12px;box-shadow:var(--shadow);
+  border:2px solid var(--line);
+  background:linear-gradient(160deg,#241a13,#171009);
+}
+.disaster-card.natural{border-color:var(--natural);box-shadow:0 0 24px rgba(111,174,82,.25),var(--shadow);}
+.disaster-card.predator{border-color:var(--predator);box-shadow:0 0 24px rgba(193,68,60,.25),var(--shadow);}
+.disaster-card.emotional{border-color:var(--emotional);box-shadow:0 0 24px rgba(74,134,176,.25),var(--shadow);}
+.disaster-card.meteor{border-color:var(--meteor);box-shadow:0 0 24px rgba(123,94,167,.35),var(--shadow);}
+.disaster-card .dicon{font-size:34px;text-align:center;}
+.disaster-card .dname{font-size:13px;font-weight:700;text-align:center;line-height:1.25;}
+
+.phase-banner{
+  text-align:center;padding:8px;border-radius:10px;
+  background:rgba(255,107,53,.1);border:1px dashed var(--lava-dim);
+  font-weight:700;letter-spacing:.5px;font-size:14px;
+}
+.timer{font-size:22px;color:var(--lava);font-weight:800;}
+
+.players-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+.pcard{
+  width:150px;background:#1c140e;border:1px solid var(--line);border-radius:12px;
+  padding:10px;text-align:center;position:relative;
+}
+.pcard.me{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;}
+.pcard.dead{opacity:.35;filter:grayscale(1);}
+.pcard .dino{font-size:26px;}
+.pcard .pname{font-weight:700;font-size:13px;margin:2px 0;}
+.pcard .ptrack{font-size:11px;color:var(--bone-dim);}
+.pcard .pval{
+  margin-top:6px;height:34px;border-radius:8px;background:#120d08;
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;
+  border:1px solid var(--line);
+}
+.pcard .disasters{margin-top:6px;display:flex;gap:3px;justify-content:center;flex-wrap:wrap;}
+.pcard .disasters span{width:9px;height:9px;border-radius:50%;display:inline-block;}
+.readybadge{
+  position:absolute;top:-8px;right:-8px;background:var(--good);color:#0a1a08;
+  border-radius:50%;width:20px;height:20px;font-size:12px;display:flex;align-items:center;justify-content:center;font-weight:900;
+}
+
+.hand{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:10px 0;}
+.hcard{
+  width:92px;height:128px;border-radius:10px;background:linear-gradient(160deg,#2a1f18,#1c140e);
+  border:2px solid var(--line);display:flex;flex-direction:column;justify-content:space-between;
+  align-items:center;padding:8px 6px;cursor:pointer;transition:transform .12s ease,border-color .12s ease;
+  position:relative;
+}
+.hcard:hover{transform:translateY(-6px);border-color:var(--lava);}
+.hcard.selected{border-color:var(--gold);transform:translateY(-10px);box-shadow:0 0 16px rgba(224,176,74,.5);}
+.hcard.disabled{opacity:.3;cursor:not-allowed;}
+.hcard.disabled:hover{transform:none;border-color:var(--line);}
+.hcard .hval{font-size:26px;font-weight:900;}
+.hcard .hlabel{font-size:9px;text-transform:uppercase;letter-spacing:.5px;text-align:center;color:var(--bone-dim);}
+.hcard .heffect{font-size:8px;color:var(--gold);text-align:center;}
+
+.reveal-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.rslip{
+  background:#1c140e;border:1px solid var(--line);border-radius:10px;padding:10px;width:120px;text-align:center;
+}
+.rslip .base{font-size:22px;font-weight:800;}
+.rslip .mod{font-size:12px;color:var(--gold);}
+.rslip.high{border-color:var(--good);box-shadow:0 0 14px rgba(111,174,82,.35);}
+.rslip.low{border-color:var(--bad);box-shadow:0 0 14px rgba(193,68,60,.35);}
+
+.overlay{
+  position:fixed;inset:0;background:rgba(10,7,4,.72);backdrop-filter:blur(3px);
+  display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;
+}
+.modal{
+  background:linear-gradient(180deg,var(--surface),var(--surface2));border:1px solid var(--gold);
+  border-radius:16px;padding:30px;max-width:420px;text-align:center;box-shadow:var(--shadow);
+}
+.copybox{
+  background:#120d08;border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+  font-family:monospace;font-size:13px;word-break:break-all;margin:10px 0;
+}
+.foot-note{font-size:11px;color:#7a6b56;text-align:center;margin-top:26px;}
+.badge-win{color:var(--gold);}
+.flash{animation:flash .6s ease;}
+@keyframes flash{0%{transform:scale(1)}30%{transform:scale(1.08)}100%{transform:scale(1)}}
+::-webkit-scrollbar{width:8px;}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ============================================================
+   DINOKALIPSA — Happy Little Dinosaurs (fan edition)
+   Frontend + Node.js/Socket.io realtime multiplayer
+   ============================================================ */
+
+/* ---------------------- UTIL ---------------------- */
+function uid(p){ return p+Math.random().toString(36).slice(2,9); }
+function shuffle(arr){
+  const a=arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function $(sel,root){ return (root||document).querySelector(sel); }
+function el(tag,attrs,children){
+  const e=document.createElement(tag);
+  if(attrs) for(const k in attrs){
+    if(k==='class') e.className=attrs[k];
+    else if(k==='html') e.innerHTML=attrs[k];
+    else if(k.startsWith('on')) e.addEventListener(k.slice(2),attrs[k]);
+    else e.setAttribute(k,attrs[k]);
+  }
+  (children||[]).forEach(c=>{ if(c) e.appendChild(typeof c==='string'?document.createTextNode(c):c); });
+  return e;
+}
+
+/* ---------------------- CARD DATA (97 CARDS) ---------------------- */
+const DISASTER_NAMES = {
+  natural:  ['Susza','Powódź','Pożar Lasu','Trzęsienie Ziemi','Wybuch Wulkanu','Tornado','Lawina Błotna','Uderzenie Pioruna'],
+  predator: ['Atak T-Rexa','Zasadzka Raptora','Pościg Drapieżnika','Walka o Terytorium','Stado Wilkodonów','Atak z Zaskoczenia','Nocny Łowca','Starcie Alfa'],
+  emotional:['Fala Samotności','Napad Zazdrości','Paraliżujący Strach','Głęboki Smutek','Uczucie Zdrady','Atak Paniki','Rozpacz','Kryzys Zaufania'],
+};
+const DISASTER_ICON = { natural:'🌪️', predator:'🦖', emotional:'💔', meteor:'☄️' };
+const CATEGORY_LABEL = { natural:'Naturalna', predator:'Drapieżna', emotional:'Emocjonalna', meteor:'Meteoryt' };
+
+function buildDisasterCards(){
+  const cards=[];
+  ['natural','predator','emotional'].forEach(cat=>{
+    DISASTER_NAMES[cat].forEach(name=>{
+      cards.push({ id:uid('dis'), kind:'disaster', category:cat, name, icon:DISASTER_ICON[cat] });
+    });
+  });
+  for(let i=1;i<=4;i++){
+    cards.push({ id:uid('dis'), kind:'disaster', category:'meteor', name:'Meteoryt '+['Alfa','Beta','Gamma','Delta'][i-1], icon:DISASTER_ICON.meteor });
+  }
+  return cards; // 28
+}
+
+function buildInstantCards(){
+  const cards=[];
+  const push=(n,name,effect,desc)=>{ for(let i=0;i<n;i++) cards.push({ id:uid('ins'), kind:'instant', name, effect, desc }); };
+  push(4,'Wzmocnienie','booster','Dodaje +2 do Twojego wyniku w tej rundzie.');
+  push(4,'Sabotaż','sapper','Odejmuje -2 od wyniku wybranego przeciwnika.');
+  push(2,'Odwrócenie Losu','reversal','Zamienia miejscami najwyższy i najniższy wynik rundy.');
+  push(3,'Ubezpieczenie','insurance','Anuluje wzięcie Katastrofy przez Ciebie w tej rundzie.');
+  push(3,'Przekierowanie','redirect','Przekierowuje Katastrofę na wybranego przeciwnika.');
+  return cards; // 16
+}
+
+function buildPointCards(){
+  const cards=[];
+  const counts=[5,6,6,6,5,5,5,5,5,5]; // values 0..9, sum = 53
+  let idx=0;
+  counts.forEach((count,value)=>{
+    for(let i=0;i<count;i++){
+      idx++;
+      let effect='none', desc='';
+      // ~30% of cards get an effect
+      if(idx%3===0){
+        if(idx%2===0){ effect='swap'; desc='Po odsłonięciu: zamień swój wynik z wynikiem gracza z najwyższym wynikiem.'; }
+        else { effect='redraw'; desc='Po odsłonięciu: odrzuć tę kartę po turze i dobierz 1 dodatkową kartę.'; }
+      }
+      cards.push({ id:uid('pt'), kind:'point', value, effect, desc, name:'Karta Punktów '+value });
+    }
+  });
+  return cards; // 53
+}
+
+const DISASTER_CARDS = buildDisasterCards();      // 28
+const INSTANT_CARDS  = buildInstantCards();        // 16
+const POINT_CARDS    = buildPointCards();           // 53
+const CARDS_DATA = [...DISASTER_CARDS, ...INSTANT_CARDS, ...POINT_CARDS]; // 97 total
+console.log('CARDS_DATA length (musi być 97):', CARDS_DATA.length);
+
+const DINOSAURS = [
+  { id:'rex',         name:'Nerwowy Rex',        icon:'🦖', mods:{predator:+1, emotional:-1}, desc:'+1 przy Katastrofie Drapieżnej, -1 przy Emocjonalnej' },
+  { id:'bronek',       name:'Pechowy Bronek',      icon:'🦕', mods:{natural:+1, predator:-1},   desc:'+1 przy Katastrofie Naturalnej, -1 przy Drapieżnej' },
+  { id:'stegozaur',    name:'Uroczy Stegozaur',    icon:'🦴', mods:{emotional:+1, natural:-1},  desc:'+1 przy Katastrofie Emocjonalnej, -1 przy Naturalnej' },
+  { id:'triceratops',  name:'Mroczny Triceratops', icon:'🐲', mods:{predator:+1, natural:-1},   desc:'+1 przy Katastrofie Drapieżnej, -1 przy Naturalnej' },
+];
+
+/* ---------------------- GLOBAL CLIENT STATE ---------------------- */
+const Net = {
+  socket:null, role:null, myId:null, myName:'', roomCode:null,
+};
+
+// Host-authoritative full game state (only meaningful when role==='host')
+let G = null;
+// Local rendering view (public + own hand) received/derived
+let V = { mode:'menu' }; // mode: menu | lobby | game | end
+
+/* ---------------------- HOST GAME LOGIC ---------------------- */
+function freshDecks(){
+  return {
+    pointDeck: shuffle([...POINT_CARDS, ...INSTANT_CARDS]),
+    pointDiscard: [],
+    disasterDeck: shuffle([...DISASTER_CARDS]),
+    disasterDiscard: [],
+  };
+}
+
+function hostInitGame(playerList){
+  const decks = freshDecks();
+  const dinoPool = shuffle(DINOSAURS.map(d=>d.id));
+  const players = {};
+  playerList.forEach((p,i)=>{
+    players[p.id] = {
+      id:p.id, name:p.name, isHost:p.isHost,
+      dinosaur: dinoPool[i % dinoPool.length],
+      hand:[], track:0, disasters:[], alive:true,
+      selectedCardId:null, instantPlayedThisRound:false, insured:false, redirectTo:null,
+    };
+  });
+  G = {
+    phase:'selecting', round:1,
+    players, order:playerList.map(p=>p.id),
+    ...decks,
+    currentDisaster:null,
+    selections:{}, revealed:{},
+    instantTimer:15, instantTimerHandle:null,
+    log:[], winner:null, loser:null, suddenDeath:false,
+  };
+  Object.values(G.players).forEach(pl=>drawCards(pl,5));
+  pushLog('Gra rozpoczęta! Rozdano karty i dinozaury.');
+  hostNewRound(true);
+}
+
+function pushLog(msg){
+  G.log.push(msg);
+  if(G.log.length>60) G.log.shift();
+}
+
+function drawCards(player,n){
+  for(let i=0;i<n;i++){
+    if(G.pointDeck.length===0){
+      G.pointDeck = shuffle(G.pointDiscard); G.pointDiscard=[];
+      if(G.pointDeck.length===0) return;
+    }
+    player.hand.push(G.pointDeck.pop());
+  }
+}
+
+function drawDisaster(){
+  if(G.disasterDeck.length===0){
+    G.disasterDeck = shuffle(G.disasterDiscard); G.disasterDiscard=[];
+  }
+  return G.disasterDeck.pop();
+}
+
+function alivePlayers(){ return G.order.map(id=>G.players[id]).filter(p=>p.alive); }
+
+function hostNewRound(first){
+  G.phase='selecting';
+  G.currentDisaster = drawDisaster();
+  G.selections={}; G.revealed={};
+  G.suddenDeath=false;
+  alivePlayers().forEach(p=>{
+    p.selectedCardId=null; p.instantPlayedThisRound=false; p.insured=false; p.redirectTo=null;
+    const hasPoint = p.hand.some(c=>c.kind==='point');
+    if(!hasPoint){
+      G.pointDiscard.push(...p.hand);
+      p.hand=[];
+      drawCards(p,5);
+      pushLog(p.name+' nie miał Karty Punktów — odrzuca rękę i dobiera nową.');
+    }
+  });
+  if(!first) pushLog('— Runda '+G.round+' — odsłonięto katastrofę: '+G.currentDisaster.name);
+  else pushLog('Runda '+G.round+' — katastrofa: '+G.currentDisaster.name);
+  broadcastState();
+}
+
+function allSelected(){
+  return alivePlayers().every(p=>G.selections[p.id]);
+}
+
+function hostSelectCard(playerId, cardId){
+  if(G.phase!=='selecting') return;
+  const p=G.players[playerId];
+  if(!p || !p.alive || G.selections[playerId]) return;
+  const idx=p.hand.findIndex(c=>c.id===cardId && c.kind==='point');
+  if(idx===-1) return;
+  const [card]=p.hand.splice(idx,1);
+  G.selections[playerId]=card;
+  pushLog(p.name+' wybrał(a) kartę zakrytą.');
+  if(allSelected()) hostReveal();
+  broadcastState();
+}
+
+function dinoModFor(playerId){
+  const p=G.players[playerId];
+  const dino=DINOSAURS.find(d=>d.id===p.dinosaur);
+  const cat=G.currentDisaster.category;
+  if(dino && dino.mods[cat]!==undefined) return dino.mods[cat];
+  return 0;
+}
+
+function hostReveal(){
+  G.phase='revealing';
+  alivePlayers().forEach(p=>{
+    const card=G.selections[p.id];
+    const mod=dinoModFor(p.id);
+    let val = card.value + mod;
+    G.revealed[p.id] = { cardId:card.id, base:card.value, mod, value:val, effect:card.effect, name:card.name };
+  });
+  // resolve immediate "swap" effects: swap with current highest
+  const entries=()=>Object.entries(G.revealed);
+  entries().forEach(([pid,r])=>{
+    if(r.effect==='swap'){
+      let best=null;
+      entries().forEach(([pid2,r2])=>{ if(pid2!==pid && (!best || r2.value>G.revealed[best].value)) best=pid2; });
+      if(best){
+        const tmp=G.revealed[pid].value;
+        G.revealed[pid].value=G.revealed[best].value;
+        G.revealed[best].value=tmp;
+        pushLog(G.players[pid].name+' zamienia się wynikiem z '+G.players[best].name+'!');
+      }
+    }
+  });
+  pushLog('Karty odsłonięte! Wkracza faza Kart Natychmiastowych (15s).');
+  broadcastState();
+  startInstantPhase();
+}
+
+function startInstantPhase(){
+  G.phase='instant';
+  G.instantTimer=15;
+  broadcastState();
+  clearInterval(G.instantTimerHandle);
+  G.instantTimerHandle = setInterval(()=>{
+    G.instantTimer--;
+    if(G.instantTimer<=0){
+      clearInterval(G.instantTimerHandle);
+      hostResolveRound();
+    } else {
+      broadcastState();
+    }
+  },1000);
+}
+
+function hostPlayInstant(playerId,cardId,targetId){
+  if(G.phase!=='instant') return;
+  const p=G.players[playerId];
+  if(!p || !p.alive) return;
+  const idx=p.hand.findIndex(c=>c.id===cardId && c.kind==='instant');
+  if(idx===-1) return;
+  const [card]=p.hand.splice(idx,1);
+  G.pointDiscard.push(card);
+  const r=G.revealed;
+  if(card.effect==='booster' && r[playerId]){
+    r[playerId].value+=2; pushLog(p.name+' gra Wzmocnienie (+2)!');
+  } else if(card.effect==='sapper' && targetId && r[targetId]){
+    r[targetId].value-=2; pushLog(p.name+' gra Sabotaż na '+G.players[targetId].name+' (-2)!');
+  } else if(card.effect==='reversal'){
+    const vals=Object.entries(r);
+    if(vals.length>1){
+      let hi=vals[0][0], lo=vals[0][0];
+      vals.forEach(([id,v])=>{ if(v.value>r[hi].value) hi=id; if(v.value<r[lo].value) lo=id; });
+      const tmp=r[hi].value; r[hi].value=r[lo].value; r[lo].value=tmp;
+      pushLog(p.name+' odwraca los! Najwyższy i najniższy wynik zamienione miejscami.');
+    }
+  } else if(card.effect==='insurance'){
+    p.insured=true; pushLog(p.name+' aktywuje Ubezpieczenie — nie weźmie katastrofy w tej rundzie.');
+  } else if(card.effect==='redirect' && targetId){
+    p.redirectTo=targetId; pushLog(p.name+' przygotowuje Przekierowanie katastrofy na '+G.players[targetId].name+'.');
+  }
+  broadcastState();
+}
+
+function hostPassInstant(playerId){
+  // no-op flag, just visual — nothing required server-side
+}
+
+function computeHighLow(){
+  const alive=alivePlayers().filter(p=>G.revealed[p.id]);
+  let highVal=-Infinity, lowVal=Infinity;
+  alive.forEach(p=>{ const v=G.revealed[p.id].value; if(v>highVal) highVal=v; if(v<lowVal) lowVal=v; });
+  let highIds = alive.filter(p=>G.revealed[p.id].value===highVal).map(p=>p.id);
+  let lowIds  = alive.filter(p=>G.revealed[p.id].value===lowVal).map(p=>p.id);
+  // insured players are removed from low pool
+  let insuredOut = lowIds.filter(id=>G.players[id].insured);
+  let remainLow = lowIds.filter(id=>!G.players[id].insured);
+  if(remainLow.length===0 && insuredOut.length>0){
+    // everyone tied-low is insured -> recompute among the rest
+    const rest = alive.filter(p=>!lowIds.includes(p.id));
+    if(rest.length>0){
+      let lv=Infinity; rest.forEach(p=>{ if(G.revealed[p.id].value<lv) lv=G.revealed[p.id].value; });
+      remainLow = rest.filter(p=>G.revealed[p.id].value===lv).map(p=>p.id);
+    }
+  }
+  return { highIds, lowIds: remainLow, insuredOut };
+}
+
+function hostResolveRound(){
+  G.phase='resolving';
+  let {highIds, lowIds, insuredOut} = computeHighLow();
+
+  if(insuredOut.length){
+    insuredOut.forEach(id=>pushLog(G.players[id].name+' unika katastrofy dzięki Ubezpieczeniu!'));
+  }
+
+  if(lowIds.length>1){
+    G.suddenDeath=true;
+    pushLog('Remis o najniższy wynik! Nagła Śmierć — dogrywka w ciemno...');
+    let round=0, current=lowIds;
+    while(current.length>1 && round<4){
+      const draws={};
+      current.forEach(id=>{
+        if(G.pointDeck.length===0){ G.pointDeck=shuffle(G.pointDiscard); G.pointDiscard=[]; }
+        const c=G.pointDeck.pop() || {value:0};
+        draws[id]=c.value;
+        if(c.id) G.pointDiscard.push(c);
+      });
+      let lv=Infinity; Object.values(draws).forEach(v=>{ if(v<lv) lv=v; });
+      current = current.filter(id=>draws[id]===lv);
+      round++;
+    }
+    lowIds = current.length?current:[lowIds[0]];
+  }
+
+  highIds.forEach(id=>{
+    const p=G.players[id];
+    p.track += 1;
+    pushLog(p.name+' ma najwyższy wynik i posuwa się na Torze Ucieczki (+1).');
+  });
+
+  lowIds.forEach(id=>{
+    const p=G.players[id];
+    let taker = id;
+    if(p.redirectTo && G.players[p.redirectTo] && G.players[p.redirectTo].alive){
+      taker = p.redirectTo;
+      pushLog(p.name+' przekierowuje katastrofę na '+G.players[taker].name+'!');
+    }
+    G.players[taker].disasters.push({ category:G.currentDisaster.category, name:G.currentDisaster.name });
+    pushLog(G.players[taker].name+' bierze katastrofę: '+G.currentDisaster.name+'.');
+  });
+
+  G.disasterDiscard.push(G.currentDisaster);
+  broadcastState();
+  setTimeout(hostEndRound, 2600);
+}
+
+function checkElimination(p){
+  const counts={natural:0,predator:0,emotional:0,meteor:0};
+  p.disasters.forEach(d=>counts[d.category]++);
+  if(Object.values(counts).some(c=>c>=3)) return true;
+  if(Object.keys(counts).every(k=>counts[k]>=1)) return true;
+  return false;
+}
+
+function hostEndRound(){
+  G.phase='roundEnd';
+  alivePlayers().forEach(p=>{
+    if(p.disasters.length>0){
+      p.track += p.disasters.length;
+    }
+  });
+  alivePlayers().forEach(p=>{
+    if(checkElimination(p)){
+      p.alive=false;
+      pushLog('💀 '+p.name+' zostaje wyeliminowany(a) — zbyt wiele katastrof!');
+    }
+  });
+
+  const winner = Object.values(G.players).find(p=>p.alive && p.track>=50);
+  const stillAlive = alivePlayers();
+
+  if(winner){
+    G.phase='gameOver'; G.winner=winner.id;
+    pushLog('🏆 '+winner.name+' dociera do bezpiecznej krainy i WYGRYWA GRĘ!');
+    broadcastState();
+    return;
+  }
+  if(stillAlive.length===1 && G.order.length>1){
+    G.phase='gameOver'; G.winner=stillAlive[0].id;
+    pushLog('🏆 '+stillAlive[0].name+' jest ostatnim ocalałym i WYGRYWA GRĘ!');
+    broadcastState();
+    return;
+  }
+  if(stillAlive.length===0){
+    G.phase='gameOver'; G.winner=null;
+    pushLog('Wszyscy gracze zostali wyeliminowani. Koniec gry.');
+    broadcastState();
+    return;
+  }
+
+  stillAlive.forEach(p=>{ if(p.hand.length<5) drawCards(p,5-p.hand.length); });
+  G.round++;
+  setTimeout(()=>hostNewRound(false), 900);
+  broadcastState();
+}
+
+/* ---------------------- NETWORKING ---------------------- */
+function buildPublicPlayers(forId){
+  const out={};
+  Object.values(G.players).forEach(p=>{
+    out[p.id]={
+      id:p.id, name:p.name, isHost:p.isHost, dinosaur:p.dinosaur, track:p.track,
+      disasters:p.disasters, alive:p.alive, handCount:p.hand.length,
+      hasSelected:!!G.selections[p.id], insured:p.insured, redirectTo:p.redirectTo,
+      hand: p.id===forId ? p.hand : undefined,
+    };
+  });
+  return out;
+}
+
+function buildStateFor(playerId){
+  if(!G) return { mode:'lobby' };
+  return {
+    mode:'game',
+    phase:G.phase, round:G.round,
+    order:G.order,
+    players:buildPublicPlayers(playerId),
+    currentDisaster:G.currentDisaster,
+    revealed:G.revealed,
+    instantTimer:G.instantTimer,
+    deckCount:G.pointDeck.length,
+    disasterDeckCount:G.disasterDeck.length,
+    log:G.log.slice(-30),
+    winner:G.winner,
+    suddenDeath:G.suddenDeath,
+    me:playerId,
+  };
+}
+
+function broadcastState(){
+  if(Net.role!=='host') return;
+  // send a PERSONALIZED payload to each connected player (so private hands
+  // never leak to other players) via the server's 'to-player' relay.
+  Object.keys(LOBBY.players.reduce((m,p)=>(m[p.id]=1,m),{})).forEach(pid=>{
+    if(pid===Net.myId) return; // host applies its own state locally below
+    Net.socket.emit('to-player', { roomCode:Net.roomCode, targetPlayerId:pid, payload:{type:'state', payload:buildStateFor(pid)} });
+  });
+  V = buildStateFor(Net.myId);
+  render();
+}
+
+function broadcastLobby(){
+  const list = LOBBY.players.map(p=>({id:p.id,name:p.name,isHost:p.isHost,ready:p.ready}));
+  Net.socket.emit('to-room', { roomCode:Net.roomCode, payload:{type:'lobby', payload:{players:list, hostId:Net.myId}} });
+}
+
+/* Lobby (pre-game) state kept separately on host */
+const LOBBY = { players:[] };
+
+function hostHandleMessage(fromId, msg){
+  if(msg.type==='join'){
+    if(!LOBBY.players.find(p=>p.id===fromId)){
+      LOBBY.players.push({ id:fromId, name:msg.name||('Gracz '+(LOBBY.players.length+1)), isHost:false, ready:false });
+      pushChatLike(msg.name+' dołączył(a) do lobby.');
+    }
+    broadcastLobby();
+  } else if(msg.type==='ready'){
+    const pl=LOBBY.players.find(p=>p.id===fromId);
+    if(pl){ pl.ready=msg.ready; broadcastLobby(); }
+  } else if(msg.type==='selectCard'){
+    hostSelectCard(fromId, msg.cardId);
+  } else if(msg.type==='playInstant'){
+    hostPlayInstant(fromId, msg.cardId, msg.targetId);
+  } else if(msg.type==='passInstant'){
+    hostPassInstant(fromId);
+  }
+}
+function pushChatLike(m){ if(G) pushLog(m); }
+
+/* ---------------------- CONNECTION DIAGNOSTICS ---------------------- */
+const NetStatus = { state:'idle', message:'' }; // idle | connecting | connected | error
+
+function genRoomCode(){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code='';
+  for(let i=0;i<5;i++) code+=chars[Math.floor(Math.random()*chars.length)];
+  return 'DINO-'+code;
+}
+function genPeerId(){ return 'p-'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4); }
+
+function setNetError(message){
+  NetStatus.state='error';
+  NetStatus.message = message;
+  console.error('Net error ->', message);
+  render();
+}
+
+/* ---------------------- HOST SETUP ---------------------- */
+function startHosting(name){
+  Net.role='host'; Net.myName=name;
+  Net.myId = genPeerId();
+  Net.roomCode = genRoomCode();
+  NetStatus.state='connecting'; NetStatus.message='Łączenie z serwerem...';
+  V={mode:'menu'}; render();
+
+  const socket = io(); // connects to the same origin serving this page
+  Net.socket = socket;
+
+  const openTimeout = setTimeout(()=>{
+    if(NetStatus.state==='connecting'){
+      setNetError('Przekroczono limit czasu (10s) połączenia z serwerem Socket.io. Sprawdź, czy serwer na Glitch działa (otwórz link serwera w drugiej karcie, żeby go "obudzić").');
+    }
+  }, 10000);
+
+  socket.on('connect', ()=>{
+    clearTimeout(openTimeout);
+    NetStatus.state='connected'; NetStatus.message='';
+    socket.emit('create-room', { roomCode:Net.roomCode, playerId:Net.myId, name });
+    LOBBY.players.push({id:Net.myId, name, isHost:true, ready:true});
+    V={mode:'lobby', isHost:true, hostId:Net.roomCode, players:LOBBY.players};
+    render();
+  });
+
+  socket.on('player-joined', ({playerId,name})=>{
+    hostHandleMessage(playerId, {type:'join', name});
+  });
+  socket.on('player-left', ({playerId})=>{
+    const pl=LOBBY.players.find(p=>p.id===playerId);
+    if(pl) pl.disconnected=true;
+    if(G && G.players[playerId]) G.players[playerId].alive=false;
+    pushChatLike((pl?pl.name:'Gracz')+' rozłączył(a) się.');
+    broadcastLobby(); if(G) broadcastState();
+  });
+  socket.on('host-message', ({fromId,msg})=>{ hostHandleMessage(fromId, msg); });
+  socket.on('connect_error', err=>{ clearTimeout(openTimeout); setNetError('Błąd połączenia z serwerem: '+err.message); });
+}
+
+function startJoining(name, roomCode){
+  Net.role='client'; Net.myName=name;
+  Net.myId = genPeerId();
+  Net.roomCode = roomCode;
+  NetStatus.state='connecting'; NetStatus.message='Łączenie z serwerem...';
+  V={mode:'menu'}; render();
+
+  const socket = io();
+  Net.socket = socket;
+
+  const openTimeout = setTimeout(()=>{
+    if(NetStatus.state==='connecting'){
+      setNetError('Przekroczono limit czasu (10s) połączenia z serwerem Socket.io. Sprawdź, czy serwer na Glitch działa.');
+    }
+  }, 10000);
+
+  socket.on('connect', ()=>{
+    socket.emit('join-room', { roomCode:Net.roomCode, playerId:Net.myId, name });
+  });
+  socket.on('join-ok', ()=>{
+    clearTimeout(openTimeout);
+    NetStatus.state='connected'; NetStatus.message='';
+    V={mode:'lobby', isHost:false, hostId:Net.roomCode, players:[]};
+    render();
+  });
+  socket.on('join-error', ({message})=>{
+    clearTimeout(openTimeout);
+    setNetError(message || 'Nie udało się dołączyć do pokoju.');
+  });
+  socket.on('lobby', payload=>{
+    if(payload.type==='lobby'){
+      V = {mode: V.mode==='game'?'game':'lobby', isHost:false, hostId:Net.roomCode, players:payload.payload.players};
+      render();
+    }
+  });
+  socket.on('state', payload=>{
+    V = payload.payload;
+    render();
+  });
+  socket.on('host-disconnected', ()=>{ setNetError('Host opuścił grę — połączenie zakończone.'); });
+  socket.on('connect_error', err=>{ clearTimeout(openTimeout); setNetError('Błąd połączenia z serwerem: '+err.message); });
+}
+
+function clientSend(msg){
+  if(Net.role==='host'){ /* host acts locally */
+    hostHandleMessage(Net.myId, msg);
+  } else if(Net.socket){
+    Net.socket.emit('to-host', { roomCode:Net.roomCode, msg });
+  }
+}
+
+/* ---------------------- RENDER ---------------------- */
+function render(){
+  const app = $('#app');
+  app.innerHTML='';
+  if(V.mode==='menu') app.appendChild(renderMenu());
+  else if(V.mode==='lobby') app.appendChild(renderLobby());
+  else if(V.mode==='game') app.appendChild(renderGame());
+}
+
+function renderHeader(subtitle){
+  const wrap = el('div',{class:'hero'},[
+    el('div',{class:'eyebrow'},['Gra karciana multiplayer • Node.js + Socket.io']),
+    el('h1',{},['DINO', el('span',{},['KALIPSA'])]),
+    el('p',{},[subtitle || 'Przetrwaj katastrofy prehistorycznego świata. Ostatni dinozaur wygrywa.']),
+  ]);
+  return wrap;
+}
+
+function renderMenu(){
+  const root = el('div',{});
+  root.appendChild(renderHeader());
+  root.appendChild(el('div',{class:'crackline'}));
+
+  const panel = el('div',{class:'card-panel grid2'});
+
+  // HOST PANEL
+  const hostBox = el('div',{});
+  hostBox.appendChild(el('h3',{},['🦖 Załóż Lobby (Host)']));
+  hostBox.appendChild(el('p',{style:'color:var(--bone-dim);font-size:13px;'},['Utwórz pokój i zaproś znajomych, wysyłając im swój kod.']));
+  hostBox.appendChild(el('label',{class:'field'},['Twoja nazwa']));
+  const hostNameInput = el('input',{type:'text',id:'hostName',placeholder:'np. Wódz Grzegorz'});
+  hostBox.appendChild(hostNameInput);
+  const hostBtn = el('button',{class:'btn',style:'margin-top:16px;',onclick:()=>{
+    const name=hostNameInput.value.trim()||'Host';
+    startHosting(name);
+  }},['Utwórz Lobby']);
+  hostBox.appendChild(hostBtn);
+
+  // JOIN PANEL
+  const joinBox = el('div',{});
+  joinBox.appendChild(el('h3',{},['🥚 Dołącz do Gry']));
+  joinBox.appendChild(el('p',{style:'color:var(--bone-dim);font-size:13px;'},['Wklej kod otrzymany od Hosta, aby dołączyć do jego pokoju.']));
+  joinBox.appendChild(el('label',{class:'field'},['Twoja nazwa']));
+  const joinNameInput = el('input',{type:'text',id:'joinName',placeholder:'np. Rex Fanka'});
+  joinBox.appendChild(joinNameInput);
+  joinBox.appendChild(el('label',{class:'field'},['Kod Hosta']));
+  const joinCodeInput = el('input',{type:'text',id:'joinCode',placeholder:'Wklej kod lobby...'});
+  joinBox.appendChild(joinCodeInput);
+  const joinBtn = el('button',{class:'btn',style:'margin-top:16px;',onclick:()=>{
+    const name=joinNameInput.value.trim()||'Gracz';
+    const code=joinCodeInput.value.trim();
+    if(!code){ alert('Podaj kod hosta!'); return; }
+    startJoining(name, code);
+  }},['Dołącz']);
+  joinBox.appendChild(joinBtn);
+
+  panel.appendChild(hostBox);
+  panel.appendChild(joinBox);
+  root.appendChild(panel);
+
+  if(NetStatus.state!=='idle'){
+    const statusPanel = el('div',{class:'card-panel',style:'margin-top:16px;'});
+    if(NetStatus.state==='connecting'){
+      statusPanel.appendChild(el('p',{style:'color:var(--gold);'},['⏳ '+NetStatus.message]));
+    } else if(NetStatus.state==='error'){
+      statusPanel.appendChild(el('p',{style:'color:var(--bad);font-weight:700;'},['⚠️ Błąd połączenia P2P']));
+      statusPanel.appendChild(el('p',{style:'color:var(--bone-dim);font-size:13px;'},[NetStatus.message]));
+      statusPanel.appendChild(el('p',{style:'color:var(--bone-dim);font-size:12px;margin-top:10px;'},[
+        'Jeśli błąd się powtarza: upewnij się, że serwer Node.js/Socket.io na Glitch jest uruchomiony (otwórz jego adres w drugiej karcie — darmowe projekty Glitch "usypiają" po bezczynności i budzą się po ok. 10–15s od pierwszego żądania), oraz że wpisany Kod Pokoju jest poprawny.'
+      ]));
+      statusPanel.appendChild(el('button',{class:'btn ghost small',onclick:()=>{ NetStatus.state='idle'; NetStatus.message=''; render(); }},['Spróbuj ponownie']));
+    }
+    root.appendChild(statusPanel);
+  }
+
+  root.appendChild(el('p',{class:'foot-note'},['97 kart • 4 dinozaury • Tor Ucieczki do 50 pkt • Serwer: Node.js + Socket.io (Glitch)']));
+  return root;
+}
+
+function renderLobby(){
+  const root = el('div',{});
+  root.appendChild(renderHeader('Lobby gry — poczekaj na znajomych i rozpocznij rozgrywkę.'));
+  const panel = el('div',{class:'card-panel'});
+
+  if(V.isHost){
+    panel.appendChild(el('label',{class:'field'},['Kod Twojego Lobby (wyślij znajomym)']));
+    const box = el('div',{class:'copybox mono'},[V.hostId||'...']);
+    panel.appendChild(box);
+    const copyBtn = el('button',{class:'btn ghost small',onclick:()=>{
+      navigator.clipboard.writeText(V.hostId||'').then(()=>{ copyBtn.textContent='Skopiowano ✓'; setTimeout(()=>copyBtn.textContent='Kopiuj kod',1200); });
+    }},['Kopiuj kod']);
+    panel.appendChild(copyBtn);
+  } else {
+    panel.appendChild(el('p',{},['Połączono z hostem: ', el('span',{class:'mono'},[V.hostId||''])]));
+  }
+
+  panel.appendChild(el('h3',{style:'margin-top:22px;'},['Gracze w lobby ('+(LOBBY_LIST().length)+'/4)']));
+  const list = el('ul',{class:'player-list'});
+  LOBBY_LIST().forEach(p=>{
+    list.appendChild(el('li',{},[
+      el('span',{},[el('span',{class:'dot on'}), p.name + (p.isHost?' (Host)':'')]),
+      el('span',{class:'tag '+(p.ready?'natural':'')} , [p.ready?'Gotowy':'Oczekuje']),
+    ]));
+  });
+  panel.appendChild(list);
+
+  if(V.isHost){
+    const startBtn = el('button',{class:'btn',onclick:()=>{
+      const players = LOBBY_LIST().slice(0,4);
+      if(players.length<2){ alert('Potrzeba minimum 2 graczy, aby rozpocząć.'); return; }
+      hostInitGame(players);
+    }},['🚀 Rozpocznij Grę']);
+    panel.appendChild(el('div',{style:'margin-top:18px;'},[startBtn]));
+  } else {
+    panel.appendChild(el('p',{style:'color:var(--bone-dim);margin-top:16px;'},['Oczekiwanie, aż Host rozpocznie grę...']));
+  }
+
+  root.appendChild(panel);
+  return root;
+}
+function LOBBY_LIST(){
+  if(Net.role==='host') return LOBBY.players;
+  return V.players||[];
+}
+
+function renderGame(){
+  const root = el('div',{class:'board'});
+  root.appendChild(renderHeader('Runda '+V.round+' • Faza: '+phaseLabel(V.phase)));
+
+  if(V.phase==='gameOver'){
+    const overlay = el('div',{class:'overlay'},[
+      el('div',{class:'modal'},[
+        el('h2',{},[V.winner ? '🏆 Zwycięzca!' : 'Koniec gry']),
+        el('p',{class:'badge-win',style:'font-size:20px;margin:14px 0;'},[V.winner ? (V.players[V.winner]?.name||'') : 'Wszyscy wyeliminowani']),
+        el('p',{style:'color:var(--bone-dim);'},['Dziękujemy za grę w Dinokalipsę!']),
+      ])
+    ]);
+    document.body.appendChild(overlay);
+  }
+
+  // Disaster + track
+  const stagePanel = el('div',{class:'card-panel'});
+  const disasterCard = V.currentDisaster ? el('div',{class:'disaster-card '+V.currentDisaster.category},[
+    el('div',{class:'dicon'},[V.currentDisaster.icon]),
+    el('div',{class:'dname'},[V.currentDisaster.name]),
+    el('div',{class:'tag '+V.currentDisaster.category,style:'align-self:center;'},[CATEGORY_LABEL[V.currentDisaster.category]]),
+  ]) : el('div',{},['Brak']);
+  stagePanel.appendChild(el('div',{class:'disaster-stage'},[disasterCard]));
+
+  let phaseMsg = phaseDescription(V.phase);
+  const banner = el('div',{class:'phase-banner'},[phaseMsg]);
+  if(V.phase==='instant'){
+    banner.appendChild(el('div',{class:'timer'},['⏱ '+V.instantTimer+'s']));
+  }
+  stagePanel.appendChild(banner);
+  root.appendChild(stagePanel);
+
+  // players row
+  const playersPanel = el('div',{class:'card-panel'});
+  playersPanel.appendChild(el('h3',{},['Gracze']));
+  const prow = el('div',{class:'players-row'});
+  V.order.forEach(pid=>{
+    const p = V.players[pid];
+    if(!p) return;
+    const dino = DINOSAURS.find(d=>d.id===p.dinosaur) || {icon:'🦕',name:''};
+    const isMe = pid===V.me;
+    const pcard = el('div',{class:'pcard '+(isMe?'me':'')+(p.alive?'':' dead')});
+    pcard.appendChild(el('div',{class:'dino'},[dino.icon]));
+    pcard.appendChild(el('div',{class:'pname'},[p.name+(p.isHost?' 👑':'')]));
+    pcard.appendChild(el('div',{class:'ptrack'},['Tor: '+p.track+' / 50']));
+    if(p.hasSelected && (V.phase==='selecting')) pcard.appendChild(el('div',{class:'readybadge'},['✓']));
+    if(V.revealed && V.revealed[pid] && (V.phase==='revealing'||V.phase==='instant'||V.phase==='resolving')){
+      const r=V.revealed[pid];
+      pcard.appendChild(el('div',{class:'pval'},[String(r.value)]));
+    } else {
+      pcard.appendChild(el('div',{class:'pval'},[p.alive?'🂠':'💀']));
+    }
+    const dis = el('div',{class:'disasters'});
+    (p.disasters||[]).forEach(d=>dis.appendChild(el('span',{style:'background:var(--'+d.category+')'})));
+    pcard.appendChild(dis);
+    prow.appendChild(pcard);
+  });
+  playersPanel.appendChild(prow);
+  root.appendChild(playersPanel);
+
+  // track bar
+  const trackPanel = el('div',{class:'track-wrap'});
+  trackPanel.appendChild(el('div',{style:'font-size:12px;color:var(--bone-dim);margin-bottom:8px;'},['Tor Ucieczki (cel: 50)']));
+  const track = el('div',{class:'track'});
+  V.order.forEach(pid=>{
+    const p=V.players[pid]; if(!p) return;
+    const pct = Math.min(100,(p.track/50)*100);
+    const dino = DINOSAURS.find(d=>d.id===p.dinosaur) || {icon:'🦕'};
+    track.appendChild(el('div',{class:'track-marker',style:'left:'+pct+'%;',title:p.name},[dino.icon]));
+  });
+  trackPanel.appendChild(track);
+  root.appendChild(trackPanel);
+
+  // reveal breakdown
+  if(V.revealed && Object.keys(V.revealed).length && (V.phase==='revealing'||V.phase==='instant'||V.phase==='resolving')){
+    const revPanel = el('div',{class:'card-panel'});
+    revPanel.appendChild(el('h3',{},['Odsłonięte wyniki']));
+    const row = el('div',{class:'reveal-row'});
+    let hi=-Infinity, lo=Infinity;
+    Object.values(V.revealed).forEach(r=>{ if(r.value>hi)hi=r.value; if(r.value<lo)lo=r.value; });
+    Object.entries(V.revealed).forEach(([pid,r])=>{
+      const p=V.players[pid];
+      const cls = r.value===hi?'high':(r.value===lo?'low':'');
+      row.appendChild(el('div',{class:'rslip '+cls},[
+        el('div',{style:'font-size:11px;color:var(--bone-dim);'},[p?p.name:'']),
+        el('div',{class:'base'},[String(r.value)]),
+        el('div',{class:'mod'},[r.mod?('dino '+(r.mod>0?'+':'')+r.mod):'']),
+      ]));
+    });
+    revPanel.appendChild(row);
+    root.appendChild(revPanel);
+  }
+
+  // my hand
+  const me = V.players[V.me];
+  if(me && me.alive && me.hand){
+    const handPanel = el('div',{class:'card-panel'});
+    handPanel.appendChild(el('h3',{},['Twoja ręka']));
+    const hand = el('div',{class:'hand'});
+    me.hand.forEach(c=>{
+      const isPoint = c.kind==='point';
+      const canSelect = V.phase==='selecting' && isPoint && !me.hasSelected;
+      const canInstant = V.phase==='instant' && c.kind==='instant';
+      const disabled = !(canSelect||canInstant);
+      const hc = el('div',{class:'hcard'+(disabled?' disabled':'')});
+      if(isPoint){
+        hc.appendChild(el('div',{class:'hval'},[String(c.value)]));
+        hc.appendChild(el('div',{class:'hlabel'},['Punkty']));
+        if(c.effect!=='none') hc.appendChild(el('div',{class:'heffect'},['✨ '+c.effect]));
+      } else {
+        hc.appendChild(el('div',{class:'hval',style:'font-size:15px;'},[iconForInstant(c.effect)]));
+        hc.appendChild(el('div',{class:'hlabel'},[c.name]));
+        hc.appendChild(el('div',{class:'heffect'},[c.desc]));
+      }
+      hc.onclick=()=>{
+        if(canSelect){ clientSend({type:'selectCard', cardId:c.id}); }
+        else if(canInstant){
+          let targetId=null;
+          if(c.effect==='sapper'||c.effect==='redirect'){
+            const opts = V.order.filter(id=>id!==V.me && V.players[id] && V.players[id].alive);
+            if(opts.length===0){ return; }
+            const choice = prompt('Wybierz cel (wpisz numer):\\n'+opts.map((id,i)=>(i+1)+'. '+V.players[id].name).join('\\n'));
+            const n=parseInt(choice,10);
+            if(!n || !opts[n-1]) return;
+            targetId=opts[n-1];
+          }
+          clientSend({type:'playInstant', cardId:c.id, targetId});
+        }
+      };
+      hand.appendChild(hc);
+    });
+    handPanel.appendChild(hand);
+    if(V.phase==='selecting' && me.hasSelected){
+      handPanel.appendChild(el('p',{style:'text-align:center;color:var(--bone-dim);font-size:13px;'},['Karta wybrana — czekamy na pozostałych graczy...']));
+    }
+    root.appendChild(handPanel);
+  } else if(me && !me.alive){
+    root.appendChild(el('div',{class:'card-panel center'},[el('h3',{},['💀 Zostałeś wyeliminowany']),el('p',{},['Możesz obserwować dalszy przebieg gry.'])]));
+  }
+
+  // log
+  const logPanel = el('div',{class:'card-panel'});
+  logPanel.appendChild(el('h3',{},['Dziennik zdarzeń']));
+  const log = el('div',{class:'log'});
+  (V.log||[]).slice().reverse().forEach(l=>log.appendChild(el('div',{},[l])));
+  logPanel.appendChild(log);
+  root.appendChild(logPanel);
+
+  root.appendChild(el('p',{class:'foot-note'},['Talia punktów: '+V.deckCount+' • Talia katastrof: '+V.disasterDeckCount]));
+
+  return root;
+}
+
+function iconForInstant(effect){
+  return {booster:'⬆️',sapper:'⬇️',reversal:'🔄',insurance:'🛡️',redirect:'↪️'}[effect]||'⭐';
+}
+function phaseLabel(p){
+  return {selecting:'Wybór kart', revealing:'Odsłonięcie', instant:'Karty Natychmiastowe', resolving:'Rozstrzygnięcie', roundEnd:'Koniec rundy', gameOver:'Koniec gry'}[p]||p;
+}
+function phaseDescription(p){
+  return {
+    selecting:'Każdy gracz wybiera zakrytą Kartę Punktów ze swojej ręki.',
+    revealing:'Karty zostają odsłonięte, naliczane są modyfikatory Dinozaurów...',
+    instant:'Możesz zagrać Kartę Natychmiastową, aby zmienić wynik rundy!',
+    resolving:'Obliczanie zwycięzcy rundy i przydział katastrofy...',
+    roundEnd:'Ruch na Torze Ucieczki i dobieranie kart...',
+    gameOver:'Gra zakończona.',
+  }[p]||'';
+}
+
+/* ---------------------- BOOT ---------------------- */
+render();
+</script>
+</body>
+</html>
